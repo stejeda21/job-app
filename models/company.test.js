@@ -8,7 +8,6 @@ const {
     commonBeforeEach,
     commonAfterEach,
     commonAfterAll,
-    testJobIds,
 } = require("./_testCommon");
 
 beforeAll(commonBeforeAll);
@@ -58,7 +57,7 @@ describe("create", function() {
 /************************************** findAll */
 
 describe("findAll", function() {
-    test("works: all", async function() {
+    test("works: no filter", async function() {
         let companies = await Company.findAll();
         expect(companies).toEqual([{
                 handle: "c1",
@@ -84,8 +83,25 @@ describe("findAll", function() {
         ]);
     });
 
-    test("works: by min employees", async function() {
-        let companies = await Company.findAll({ minEmployees: 2 });
+    test("works: w/all filters", async function() {
+        let companies = await Company.findAll({
+            name: "c1",
+            maxEmployees: 1,
+            minEmployees: 1
+        });
+        expect(companies).toEqual([{
+            handle: "c1",
+            name: "C1",
+            description: "Desc1",
+            numEmployees: 1,
+            logoUrl: "http://c1.img",
+        }]);
+    });
+
+    test("works: w/only min filter", async function() {
+        let companies = await Company.findAll({
+            minEmployees: 2
+        });
         expect(companies).toEqual([{
                 handle: "c2",
                 name: "C2",
@@ -103,8 +119,10 @@ describe("findAll", function() {
         ]);
     });
 
-    test("works: by max employees", async function() {
-        let companies = await Company.findAll({ maxEmployees: 2 });
+    test("works: w/only max filter", async function() {
+        let companies = await Company.findAll({
+            maxEmployees: 2
+        });
         expect(companies).toEqual([{
                 handle: "c1",
                 name: "C1",
@@ -118,45 +136,35 @@ describe("findAll", function() {
                 description: "Desc2",
                 numEmployees: 2,
                 logoUrl: "http://c2.img",
-            },
+            }
         ]);
     });
 
-    test("works: by min-max employees", async function() {
-        let companies = await Company.findAll({ minEmployees: 1, maxEmployees: 1 });
+    test("works: w/min-max filters", async function() {
+        let companies = await Company.findAll({
+            minEmployees: 2,
+            maxEmployees: 2
+        });
         expect(companies).toEqual([{
-            handle: "c1",
-            name: "C1",
-            description: "Desc1",
-            numEmployees: 1,
-            logoUrl: "http://c1.img",
-        }, ]);
+            handle: "c2",
+            name: "C2",
+            description: "Desc2",
+            numEmployees: 2,
+            logoUrl: "http://c2.img",
+        }]);
     });
 
-    test("works: by name", async function() {
-        let companies = await Company.findAll({ name: "1" });
-        expect(companies).toEqual([{
-            handle: "c1",
-            name: "C1",
-            description: "Desc1",
-            numEmployees: 1,
-            logoUrl: "http://c1.img",
-        }, ]);
-    });
-
-    test("works: empty list on nothing found", async function() {
-        let companies = await Company.findAll({ name: "nope" });
-        expect(companies).toEqual([]);
-    });
-
-    test("bad request if invalid min > max", async function() {
+    test("fails: w/min > max", async function() {
         try {
-            await Company.findAll({ minEmployees: 10, maxEmployees: 1 });
-            fail();
+            await Company.findAll({
+                minEmployees: 3,
+                maxEmployees: 5
+            });
         } catch (err) {
             expect(err instanceof BadRequestError).toBeTruthy();
         }
     });
+
 });
 
 /************************************** get */
@@ -170,12 +178,6 @@ describe("get", function() {
             description: "Desc1",
             numEmployees: 1,
             logoUrl: "http://c1.img",
-            jobs: [
-                { id: testJobIds[0], title: "Job1", salary: 100, equity: "0.1" },
-                { id: testJobIds[1], title: "Job2", salary: 200, equity: "0.2" },
-                { id: testJobIds[2], title: "Job3", salary: 300, equity: "0" },
-                { id: testJobIds[3], title: "Job4", salary: null, equity: null },
-            ],
         });
     });
 

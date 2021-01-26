@@ -42,65 +42,33 @@ class Company {
         return company;
     }
 
-    /** Find all companies (optional filter on searchFilters).
-     *
-     * searchFilters (all optional):
-     * - minEmployees
-     * - maxEmployees
-     * - name (will find case-insensitive, partial matches)
+    /** Find all companies. Optional filter parameters using query strings
+     *  filter paramters include: name, minEmployees, maxEmployees
      *
      * Returns [{ handle, name, description, numEmployees, logoUrl }, ...]
      * */
 
-    static async findAll(searchFilters = {}) {
-        let query = `SELECT handle,
-                        name,
-                        description,
-                        num_employees AS "numEmployees",
-                        logo_url AS "logoUrl"
-                 FROM companies`;
-        let whereExpressions = [];
-        let queryValues = [];
+    static async findAll(queryFilters = {}) {
+        const { sqlString, sqlValues } = handleFiltering(queryFilters);
 
-        const { minEmployees, maxEmployees, name } = searchFilters;
-
-        if (minEmployees > maxEmployees) {
-            throw new BadRequestError("Min employees cannot be greater than max");
-        }
-
-        // For each possible search term, add to whereExpressions and queryValues so
-        // we can generate the right SQL
-
-        if (minEmployees !== undefined) {
-            queryValues.push(minEmployees);
-            whereExpressions.push(`num_employees >= $${queryValues.length}`);
-        }
-
-        if (maxEmployees !== undefined) {
-            queryValues.push(maxEmployees);
-            whereExpressions.push(`num_employees <= $${queryValues.length}`);
-        }
-
-        if (name) {
-            queryValues.push(`%${name}%`);
-            whereExpressions.push(`name ILIKE $${queryValues.length}`);
-        }
-
-        if (whereExpressions.length > 0) {
-            query += " WHERE " + whereExpressions.join(" AND ");
-        }
-
-        // Finalize query and return results
-
-        query += " ORDER BY name";
-        const companiesRes = await db.query(query, queryValues);
+        const companiesRes = await db.query(
+            `SELECT handle,
+                  name,
+                  description,
+                  num_employees AS "numEmployees",
+                  logo_url AS "logoUrl"
+           FROM companies
+            ${sqlString}
+           ORDER BY name`,
+            sqlValues
+        );
         return companiesRes.rows;
     }
 
     /** Given a company handle, return data about company.
      *
      * Returns { handle, name, description, numEmployees, logoUrl, jobs }
-     *   where jobs is [{ id, title, salary, equity }, ...]
+     *   where jobs is [{ id, title, salary, equity, companyHandle }, ...]
      *
      * Throws NotFoundError if not found.
      **/
@@ -113,20 +81,18 @@ class Company {
                   num_employees AS "numEmployees",
                   logo_url AS "logoUrl"
            FROM companies
-           WHERE handle = $1`, [handle]);
+           WHERE handle = $1`,
+
+            [handle]);
+
+        // SELECT name, json_agg(hobby) AS hobbies
+        // FROM users AS u
+        //   JOIN hobbies AS h ON (u.name = h.user_name)
+        // GROUP BY name;
 
         const company = companyRes.rows[0];
 
         if (!company) throw new NotFoundError(`No company: ${handle}`);
-
-        const jobsRes = await db.query(
-            `SELECT id, title, salary, equity
-           FROM jobs
-           WHERE company_handle = $1
-           ORDER BY id`, [handle],
-        );
-
-        company.jobs = jobsRes.rows;
 
         return company;
     }
@@ -182,6 +148,35 @@ class Company {
 
         if (!company) throw new NotFoundError(`No company: ${handle}`);
     }
+}
+
+// Construct a string to include in the SQL query based on given query strings
+function handleFiltering(queryFilters) {
+    let idxCounter = 0;
+    const sqlStatements = []
+    const sqlValues = []
+    if (queryFilters.name) {
+        idxCounter++;
+        sqlStatements.push(`LOWER(name) LIKE LOWER($${idxCounter})`);
+        sqlValues.push(`%${queryFilters.name}%`);
+    }
+    if (queryFilters.minEmployees) {
+        idxCounter++;
+        sqlStatements.push(`num_employees >= $${idxCounter}`);
+        sqlValues.push(queryFilters.minEmployees);
+    }
+    if (queryFilters.maxEmployees) {
+        idxCounter++;
+        sqlStatements.push(`num_employees <= $${idxCounter}`);
+        sqlValues.push(queryFilters.maxEmployees);
+    }
+
+    if (queryFilters.minEmployees > queryFilters.maxEmployees) {
+        throw new BadRequestError(`Invalid parameters: minEmployees cannot be greater than maxEmployees`);
+    }
+
+    let sqlString = sqlStatements.length > 0 ? "WHERE " + sqlStatements.join(" AND ") : ""
+    return { sqlString, sqlValues }
 }
 
 

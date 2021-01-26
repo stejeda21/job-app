@@ -111,6 +111,22 @@ class User {
         return result.rows;
     }
 
+    /** Find all jobs that specified user has applied to.
+     * 
+     *
+     * Returns [{jobId}, ...]
+     * 
+     * */
+    static async getJobs(username) {
+        const jobsRes = await db.query(
+            `SELECT job_id
+            FROM applications
+            WHERE username = $1`, [username]
+        );
+
+        return jobsRes.rows;
+    }
+
     /** Given a username, return data about user.
      *
      * Returns { username, first_name, last_name, is_admin, jobs }
@@ -134,12 +150,6 @@ class User {
 
         if (!user) throw new NotFoundError(`No user: ${username}`);
 
-        const userApplicationsRes = await db.query(
-            `SELECT a.job_id
-           FROM applications AS a
-           WHERE a.username = $1`, [username]);
-
-        user.applications = userApplicationsRes.rows.map(a => a.job_id);
         return user;
     }
 
@@ -191,7 +201,6 @@ class User {
     }
 
     /** Delete given user from database; returns undefined. */
-
     static async remove(username) {
         let result = await db.query(
             `DELETE
@@ -204,34 +213,13 @@ class User {
         if (!user) throw new NotFoundError(`No user: ${username}`);
     }
 
-    /** Apply for job: update db, returns undefined.
-     *
-     * - username: username applying for job
-     * - jobId: job id
-     **/
-
-    static async applyToJob(username, jobId) {
-        const preCheck = await db.query(
-            `SELECT id
-           FROM jobs
-           WHERE id = $1`, [jobId]);
-        const job = preCheck.rows[0];
-
-        if (!job) throw new NotFoundError(`No job: ${jobId}`);
-
-        const preCheck2 = await db.query(
-            `SELECT username
-           FROM users
-           WHERE username = $1`, [username]);
-        const user = preCheck2.rows[0];
-
-        if (!user) throw new NotFoundError(`No username: ${username}`);
-
-        await db.query(
-            `INSERT INTO applications (job_id, username)
-           VALUES ($1, $2)`, [jobId, username]);
+    // Add job application to database
+    static async applyForJob(username, jobId) {
+        await db.query(`
+      INSERT INTO applications (username, job_id)
+      VALUES ($1, $2)
+      RETURNING username, job_id`, [username, jobId]);
     }
 }
-
 
 module.exports = User;

@@ -1,30 +1,63 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "$id": "http://our.company.com/jobNew.schema.json",
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "http://example.com/example.json",
     "type": "object",
-    "properties": {
-        "title": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 50
-        },
-        "companyHandle": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 30
-        },
-        "salary": {
-            "type": "integer",
-            "minimum": 0
-        },
-        "equity": {
-            "type": "string",
-            "pattern": "0|(0?\\.[0-9]+)"
-        }
-    },
-    "additionalProperties": false,
+    "title": "The root schema",
+    "description": "The root schema comprises the entire JSON document.",
+    "default": {},
+    "examples": [{
+        "title": "Pro gamer",
+        "salary": 60000,
+        "equity": 0,
+        "company_handle": "baker-santos"
+    }],
     "required": [
         "title",
-        "companyHandle"
-    ]
+        "salary",
+        "equity",
+        "company_handle"
+    ],
+    "properties": {
+        "title": {
+            "$id": "#/properties/title",
+            "type": "string",
+            "title": "The title schema",
+            "description": "An explanation about the purpose of this instance.",
+            "default": "",
+            "examples": [
+                "Pro gamer"
+            ]
+        },
+        "salary": {
+            "$id": "#/properties/salary",
+            "type": "integer",
+            "title": "The salary schema",
+            "description": "An explanation about the purpose of this instance.",
+            "default": 0,
+            "examples": [
+                60000
+            ]
+        },
+        "equity": {
+            "$id": "#/properties/equity",
+            "type": "integer",
+            "title": "The equity schema",
+            "description": "An explanation about the purpose of this instance.",
+            "default": 0,
+            "examples": [
+                0
+            ]
+        },
+        "company_handle": {
+            "$id": "#/properties/company_handle",
+            "type": "string",
+            "title": "The company_handle schema",
+            "description": "An explanation about the purpose of this instance.",
+            "default": "",
+            "examples": [
+                "baker-santos"
+            ]
+        }
+    },
+    "additionalProperties": false
 }
